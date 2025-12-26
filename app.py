@@ -26,7 +26,9 @@ matplotlib.rcParams.update(
 )
 
 def apply_formatters(ax, fmt_x: bool = True, fmt_y: bool = True):
-    """Avoid scientific notation; show thousand separators."""
+    """
+    Grafiklerde sayıların bilimsel gösterimle (e) değil, binlik ayraçla gösterilmesini sağlar.
+    """
     if fmt_x:
         ax.xaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
     if fmt_y:
@@ -35,13 +37,18 @@ def apply_formatters(ax, fmt_x: bool = True, fmt_y: bool = True):
 
 
 def strip_label(data: Dict[str, float]) -> Dict[str, float]:
-    """Remove optional 'label' key when passing params into calculations."""
+    """
+    Senaryo sözlüklerindeki 'label' anahtarını kaldırır çünkü hesaplamalarda kullanmıyoruz.
+    """
     return {k: v for k, v in data.items() if k != "label"}
 
 app = Flask(__name__)
 
 
 def currencyformat(value: float) -> str:
+    """
+    Sayıları para formatında gösterir ($1,234,567 gibi). Template'de kullanılıyor.
+    """
     try:
         return f"${value:,.0f}"
     except Exception:
@@ -69,6 +76,9 @@ DEFAULTS = {
 
 
 def parse_float(name: str, default: float) -> float:
+    """
+    Formdan gelen değeri float'a çevirir. Eğer boşsa veya hatalıysa varsayılan değeri döner.
+    """
     val = request.args.get(name, None)
     if val is None or val == "":
         return default
@@ -81,6 +91,11 @@ def parse_float(name: str, default: float) -> float:
 def calculate_metrics(
     *, selling_price: float, variable_cost: float, fixed_costs: float, units_sold: float, tax_rate: float
 ) -> Dict[str, float]:
+    """
+    CVP analizi için gerekli metrikleri hesaplar.
+    Katkı payı, faaliyet geliri, net gelir, başa baş noktası gibi değerleri döner.
+    tax_rate yüzde olarak girilir (örn: 25 = %25)
+    """
     cm_per_unit = selling_price - variable_cost
     total_cm = cm_per_unit * units_sold
     operating_income = total_cm - fixed_costs
@@ -100,12 +115,20 @@ def calculate_metrics(
 
 
 def units_range(max_units: float, steps: int = 30) -> List[float]:
+    """
+    Grafikler için 0'dan max_units'e kadar eşit aralıklarla ünite listesi oluşturur.
+    En az 1000 ünite olacak şekilde ayarlanır.
+    """
     max_units = max(max_units, 1_000.0)
     step = max_units / steps
     return [i * step for i in range(steps + 1)]
 
 
 def plot_costs(params: Dict[str, float]) -> str:
+    """
+    Sabit maliyet, değişken maliyet, toplam maliyet ve geliri gösteren grafik oluşturur.
+    Base64 formatında PNG döner.
+    """
     sp, vc, fc = params["selling_price"], params["variable_cost"], params["fixed_costs"]
     units = units_range(max(params["units_sold"] * 1.6, fc / max(sp - vc, 1) * 1.3))
     fixed_line = [fc for _ in units]
@@ -130,6 +153,10 @@ def plot_costs(params: Dict[str, float]) -> str:
 
 
 def plot_contribution_margin(params: Dict[str, float]) -> str:
+    """
+    Toplam katkı payının satılan ünite sayısına göre değişimini gösteren grafik.
+    Katkı payı = (satış fiyatı - değişken maliyet) × ünite sayısı
+    """
     sp, vc = params["selling_price"], params["variable_cost"]
     units = units_range(params["units_sold"] * 1.6)
     cm_line = [(sp - vc) * u for u in units]
@@ -147,6 +174,11 @@ def plot_contribution_margin(params: Dict[str, float]) -> str:
 
 
 def plot_scenario_compare(scenarios: Dict[str, Dict[str, float]]) -> str:
+    """
+    Üç senaryonun (A, B, C) faaliyet gelirini karşılaştıran grafik.
+    Her senaryo için faaliyet geliri = 0 olan nokta (başa baş noktası) işaretlenir.
+    Senaryolar farklı renklerle çizilir.
+    """
     colors = {"A": "#2563eb", "B": "#f97316", "C": "#22c55e"}
     max_units = 0
     metrics_map: Dict[str, Dict[str, float]] = {}
@@ -185,6 +217,11 @@ def plot_scenario_compare(scenarios: Dict[str, Dict[str, float]]) -> str:
 
 
 def plot_scenario_cost_revenue(scenarios: Dict[str, Dict[str, float]]) -> str:
+    """
+    Üç senaryonun gelir ve toplam maliyet çizgilerini karşılaştıran grafik.
+    Gelir düz çizgi, maliyet kesikli çizgi olarak gösterilir.
+    Gelir = maliyet olan noktalar (başa baş noktaları) işaretlenir.
+    """
     colors = {"A": "#2563eb", "B": "#f97316", "C": "#22c55e"}
     max_units = 0
     metrics_map: Dict[str, Dict[str, float]] = {}
@@ -230,6 +267,9 @@ def plot_scenario_cost_revenue(scenarios: Dict[str, Dict[str, float]]) -> str:
 
 
 def fig_to_base64(fig: matplotlib.figure.Figure) -> str:
+    """
+    Matplotlib grafiğini base64 formatına çevirir. HTML'e direkt gömülebilir.
+    """
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=140, bbox_inches="tight")
     plt.close(fig)
@@ -239,6 +279,12 @@ def fig_to_base64(fig: matplotlib.figure.Figure) -> str:
 
 @app.route("/")
 def analysis():
+    """
+    Ana sayfa route'u. Form verilerini alır, metrikleri hesaplar, grafikleri oluşturur ve sayfayı render eder.
+    Senaryo A: Fiyat düşürme + satış artışı beklentisi
+    Senaryo B: Değişken maliyet ve fiyat düşürme, satış aynı
+    Senaryo C: Sabit maliyet ve fiyat düşürme, satış hacmi azalması
+    """
     # Baseline inputs
     params = {
         "selling_price": parse_float("selling_price", DEFAULTS["selling_price"]),
