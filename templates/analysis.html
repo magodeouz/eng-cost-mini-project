@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Department of Industrial Engineering | IE 2211 Engineering Cost Analysis | MINI PROJECT: COST-VOLUME-PROFIT ANALYSIS & SENSITIVITY ANALYSIS</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --accent-2: #f97316;
+      --accent-3: #22c55e;
+      --card: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #0f172a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 15% 20%, rgba(37,99,235,0.08), transparent 32%),
+                  radial-gradient(circle at 85% 0%, rgba(34,197,94,0.08), transparent 28%),
+                  var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px;
+    }
+    h1 { margin: 0 0 8px; }
+    h2 { margin: 24px 0 8px; }
+    p { color: var(--muted); margin-top: 0; }
+    .container { max-width: 1180px; margin: 0 auto; }
+    .stack { display: flex; flex-direction: column; gap: 20px; }
+    .grid { display: grid; gap: 16px; }
+    .two-col { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .charts-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+    .scenario-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+    }
+    label { display: block; font-size: 14px; color: #475569; margin-bottom: 6px; }
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+    }
+    .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .cards.scenario-results { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .card h3 { margin: 0 0 6px; font-size: 16px; color: #1e293b; }
+    .value { font-size: 22px; font-weight: 700; color: #0f172a; }
+    .muted { color: var(--muted); font-size: 14px; }
+    .chart-wrap { background: #ffffff; border-radius: 14px; padding: 12px; border: 1px solid var(--border); box-shadow: 0 12px 28px rgba(15,23,42,0.08); }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.12);
+      color: #1d4ed8;
+      font-size: 12px;
+      margin-left: 6px;
+    }
+    .section-title { display: flex; align-items: center; gap: 8px; }
+    .hint { font-size: 13px; color: #475569; }
+    button {
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #2563eb, #22c55e);
+      color: white;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.12s ease, opacity 0.15s ease;
+    }
+    button:hover { transform: translateY(-1px); opacity: 0.95; }
+    button:active { transform: translateY(0); }
+    @media (max-width: 720px) { body { padding: 16px; } }
+    .formula { font-family: "SFMono-Regular", Consolas, Monaco, monospace; color: #475569; }
+  </style>
+</head>
+<body>
+  <div class="container stack">
+    <header>
+      <h1>CVP & Sensitivity Analysis</h1>
+      <p>SmartAgroTechnologies Co. — Diesel engines for small farming equipment.</p>
+    </header>
+
+    <section class="panel">
+      <div class="section-title">
+        <h2>Baseline Inputs</h2>
+        <span class="badge">Case defaults applied</span>
+      </div>
+      <p>Enter or adjust the parameters, changes auto-apply (server-rendered with Matplotlib).</p>
+      <form id="baseline-form" class="grid two-col" method="get">
+        <div>
+          <label for="sellingPrice">Selling price (per engine, $)</label>
+          <input type="number" step="10" id="sellingPrice" name="selling_price" value="{{ params.selling_price }}">
+        </div>
+        <div>
+          <label for="variableCost">Variable cost (per engine, $)</label>
+          <input type="number" step="10" id="variableCost" name="variable_cost" value="{{ params.variable_cost }}">
+        </div>
+        <div>
+          <label for="fixedCosts">Annual fixed costs ($)</label>
+          <input type="number" step="10000" id="fixedCosts" name="fixed_costs" value="{{ params.fixed_costs }}">
+        </div>
+        <div>
+          <label for="unitsSold">Units sold (baseline)</label>
+          <input type="number" step="50" id="unitsSold" name="units_sold" value="{{ params.units_sold }}">
+        </div>
+        <div>
+          <label for="taxRate">Income tax rate (%)</label>
+          <input type="number" step="0.1" id="taxRate" name="tax_rate" value="{{ params.tax_rate }}">
+        </div>
+        <div>
+          <label for="targetNetIncome">Target net income ($)</label>
+          <input type="number" step="10000" id="targetNetIncome" value="{{ defaults.target_net_income }}">
+        </div>
+        <div style="display:flex; align-items:flex-end;">
+          <button type="submit">Update charts</button>
+        </div>
+      </form>
+
+      <div class="cards" id="baseline-metrics">
+        <div class="card">
+          <h3>Total contribution margin</h3>
+          <div class="value">{{ baseline.total_cm | currencyformat }}</div>
+          <div class="muted">CM per unit: {{ baseline.cm_per_unit | currencyformat }} | CM %: {{ (baseline.cm_pct*100) | round(1) }}%</div>
+        </div>
+        <div class="card">
+          <h3>Operating income (pre-tax)</h3>
+          <div class="value">{{ baseline.operating_income | currencyformat }}</div>
+          <div class="muted">Revenue − Total cost</div>
+        </div>
+        <div class="card">
+          <h3>Net income (after tax)</h3>
+          <div class="value">{{ baseline.net_income | currencyformat }}</div>
+          <div class="muted">Tax rate applied: {{ params.tax_rate|round(1) }}%</div>
+        </div>
+        <div class="card">
+          <h3>Break-even point</h3>
+          <div class="value">{{ baseline.breakeven_units|round(0) }} units</div>
+          <div class="muted">Revenue at B/E: {{ baseline.breakeven_revenue | currencyformat }}</div>
+        </div>
+      </div>
+      <p class="hint">Net income formula: <span class="formula">NI = ((SP − VC) × Units − Fixed) × (1 − Tax%)</span></p>
+    </section>
+
+    <section class="charts-grid">
+      <div class="chart-wrap">
+        <div class="section-title">
+          <h2>Cost Structure</h2>
+          <span class="badge">Fixed vs. variable vs. total</span>
+        </div>
+        <img src="data:image/png;base64,{{ cost_img }}" alt="Cost chart" style="width:100%; border-radius:10px;" />
+      </div>
+      <div class="chart-wrap">
+        <div class="section-title">
+          <h2>Total Contribution Margin</h2>
+          <span class="badge">By units sold</span>
+        </div>
+        <img src="data:image/png;base64,{{ cm_img }}" alt="Contribution margin chart" style="width:100%; border-radius:10px;" />
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <h2>Sensitivity Analysis (Mutually Exclusive)</h2>
+        <span class="badge">Graphical solution</span>
+      </div>
+      <p>Adjust the assumptions for each scenario. Results and the chart update instantly.</p>
+
+      <div class="scenario-grid">
+        <div class="card">
+          <h3>Scenario A</h3>
+          <p class="muted">Reduce selling price, expect sales increase.</p>
+          <label>Price reduction (%)</label>
+          <input type="number" form="baseline-form" name="scA_price_drop" value="{{ request.args.get('scA_price_drop', defaults.scA_price_drop) }}" step="0.5">
+          <label>Sales increase (%)</label>
+          <input type="number" form="baseline-form" name="scA_sales_lift" value="{{ request.args.get('scA_sales_lift', defaults.scA_sales_lift) }}" step="0.5">
+        </div>
+        <div class="card">
+          <h3>Scenario B</h3>
+          <p class="muted">Lower variable cost and selling price; sales unchanged.</p>
+          <label>Variable cost reduction ($)</label>
+          <input type="number" form="baseline-form" name="scB_vc_drop" value="{{ request.args.get('scB_vc_drop', defaults.scB_vc_drop) }}" step="10">
+          <label>Selling price reduction ($)</label>
+          <input type="number" form="baseline-form" name="scB_sp_drop" value="{{ request.args.get('scB_sp_drop', defaults.scB_sp_drop) }}" step="10">
+        </div>
+        <div class="card">
+          <h3>Scenario C</h3>
+          <p class="muted">Lower fixed cost and selling price; sales volume drops.</p>
+          <label>Fixed cost reduction (%)</label>
+          <input type="number" form="baseline-form" name="scC_fc_drop" value="{{ request.args.get('scC_fc_drop', defaults.scC_fc_drop) }}" step="1">
+          <label>Selling price reduction (%)</label>
+          <input type="number" form="baseline-form" name="scC_sp_drop" value="{{ request.args.get('scC_sp_drop', defaults.scC_sp_drop) }}" step="0.5">
+          <label>Units sold (expected)</label>
+          <input type="number" form="baseline-form" name="scC_units" value="{{ request.args.get('scC_units', defaults.scC_units) }}" step="50">
+        </div>
+      </div>
+
+      <div class="cards scenario-results">
+        <div class="card">
+          <h3>Scenario A results</h3>
+          <div class="value">{{ scenario_metrics.A.net_income | currencyformat }}</div>
+          <div class="muted">B/E units: {{ scenario_metrics.A.breakeven_units|round(0) }}</div>
+          <div class="muted">B/E revenue: {{ scenario_metrics.A.breakeven_revenue | currencyformat }}</div>
+        </div>
+        <div class="card">
+          <h3>Scenario B results</h3>
+          <div class="value">{{ scenario_metrics.B.net_income | currencyformat }}</div>
+          <div class="muted">B/E units: {{ scenario_metrics.B.breakeven_units|round(0) }}</div>
+          <div class="muted">B/E revenue: {{ scenario_metrics.B.breakeven_revenue | currencyformat }}</div>
+        </div>
+        <div class="card">
+          <h3>Scenario C results</h3>
+          <div class="value">{{ scenario_metrics.C.net_income | currencyformat }}</div>
+          <div class="muted">B/E units: {{ scenario_metrics.C.breakeven_units|round(0) }}</div>
+          <div class="muted">B/E revenue: {{ scenario_metrics.C.breakeven_revenue | currencyformat }}</div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-wrap">
+          <div class="section-title">
+            <h2>Operating Income vs Units (Scenarios)</h2>
+            <span class="badge">Lines: A/B/C, Points: B/E units</span>
+          </div>
+          <img src="data:image/png;base64,{{ scenario_img }}" alt="Scenario operating income comparison" style="width:100%; border-radius:10px;" />
+        </div>
+        <div class="chart-wrap">
+          <div class="section-title">
+            <h2>Scenario Cost vs. Revenue</h2>
+            <span class="badge" id="scenarioBadge">Matplotlib server-rendered</span>
+          </div>
+          <img src="data:image/png;base64,{{ scenario_cost_img }}" alt="Scenario cost vs revenue" style="width:100%; border-radius:10px;" />
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // Auto-submit on input change (debounced) so charts regenerate without manual click
+    const form = document.getElementById("baseline-form");
+    const inputs = document.querySelectorAll("input[type='number']");
+    let timer;
+    inputs.forEach((el) => {
+      el.addEventListener("input", () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => form.requestSubmit(), 450);
+      });
+    });
+  </script>
+</body>
+</html>
+
